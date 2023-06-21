@@ -18,7 +18,6 @@ class ExerciseReminder:
     self.sessions_log = []
     self.completed_exercises = []
 
-
     self.exercises = {
       "Knee Extension": {
         "sets": 3,
@@ -84,11 +83,6 @@ class ExerciseReminder:
                                          command=self.edit_session_log)
     self.edit_session_button.pack()
 
-    self.save_log_button = tk.Button(self.root,
-                                     text="Save Session Log",
-                                     command=self.save_session_log)
-    self.save_log_button.pack()
-
     self.upload_log_button = tk.Button(self.root,
                                        text="Upload Session Logs",
                                        command=self.upload_session_logs)
@@ -151,7 +145,6 @@ class ExerciseReminder:
                 text=f"Timer: {self.remaining_time//60:02d}:{self.remaining_time%60:02d}"
             )
 
-
   def check_timer(self):
     if self.current_exercise is not None and self.remaining_time > 0:
       self.remaining_time -= 1
@@ -180,18 +173,15 @@ class ExerciseReminder:
     messagebox.showinfo("View Sessions", sessions_message)
 
   def add_session(self):
-    num_sessions = simpledialog.askinteger(
-      "Add Session", "Enter the number of sessions to add:")
-    if num_sessions:
-      self.session_count += num_sessions
-      for _ in range(num_sessions):
-        self.sessions_log.append(time.strftime("%H:%M"))
+    session_time = simpledialog.askstring("Add Session", "Enter the session time (HH:MM):")
+    if session_time:
+      self.sessions_log.append(session_time)
+      self.session_count += 1
       self.check_session_count()
 
   def edit_session_log(self):
     if not self.sessions_log:
-      messagebox.showwarning("Edit Session Log",
-                             "No sessions available to edit.")
+      messagebox.showwarning("Edit Session Log", "No sessions available to edit.")
       return
 
     selected_session = simpledialog.askinteger(
@@ -205,25 +195,10 @@ class ExerciseReminder:
           initialvalue=self.sessions_log[selected_session_index])
         if edited_time:
           self.sessions_log[selected_session_index] = edited_time
-          self.check_session_count()
       else:
         messagebox.showwarning(
           "Edit Session Log",
           "Invalid session number. Please select a valid session to edit.")
-
-  def save_session_log(self):
-    if not self.sessions_log:
-      messagebox.showwarning("Save Session Log",
-                             "No sessions available to save.")
-      return
-
-    filename = "session_log.csv"
-    with open(filename, mode="w", newline="") as file:
-      writer = csv.writer(file)
-      writer.writerow(["Session Time"])
-      writer.writerows([[session_time] for session_time in self.sessions_log])
-    messagebox.showinfo("Save Session Log",
-                        f"Session log saved as '{filename}'.")
 
   def upload_session_logs(self):
     filename = simpledialog.askstring("Upload Session Logs",
@@ -246,6 +221,18 @@ class ExerciseReminder:
         messagebox.showwarning("Upload Session Logs",
                                "Error occurred while reading the CSV file.")
 
+  def save_session_log(self):
+    if not self.sessions_log:
+      messagebox.showwarning("Save Session Log", "No sessions available to save.")
+      return
+
+    filename = "session_log.csv"
+    with open(filename, mode="w", newline="") as file:
+      writer = csv.writer(file)
+      writer.writerow(["Session Time"])
+      writer.writerows([[session_time] for session_time in self.sessions_log])
+    messagebox.showinfo("Save Session Log",
+                        f"Session log saved as '{filename}'.")
 
 if __name__ == "__main__":
   ExerciseReminder()
