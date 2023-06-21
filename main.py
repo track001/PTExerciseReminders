@@ -16,6 +16,8 @@ class ExerciseReminder:
     self.remaining_time = 0
     self.session_count = 0
     self.sessions_log = []
+    self.completed_exercises = []
+
 
     self.exercises = {
       "Knee Extension": {
@@ -114,23 +116,41 @@ class ExerciseReminder:
   def complete_set(self):
     exercise = self.current_exercise
     if self.current_set < self.exercises[exercise]["sets"]:
-      self.current_set += 1
-      self.remaining_time = self.exercises[exercise]["time"]
-      self.sets_count_label.configure(
-        text=
-        f"{exercise}: Set {self.current_set} of {self.exercises[exercise]['sets']} sets"
-      )
-      self.timer_label.configure(
-        text=
-        f"Timer: {self.remaining_time//60:02d}:{self.remaining_time%60:02d}")
+        self.current_set += 1
+        self.remaining_time = self.exercises[exercise]["time"]
+        self.sets_count_label.configure(
+            text=f"{exercise}: Set {self.current_set} of {self.exercises[exercise]['sets']} sets"
+        )
+        self.timer_label.configure(
+            text=f"Timer: {self.remaining_time//60:02d}:{self.remaining_time%60:02d}"
+        )
     else:
-      self.current_exercise = None
-      self.sets_count_label.configure(text="")
-      self.timer_label.configure(text="Timer: ")
-      self.complete_button.configure(state=tk.DISABLED)
-      self.session_count += 1
-      self.sessions_log.append(time.strftime("%H:%M"))
-      self.check_session_count()
+        self.completed_exercises.append(exercise)
+        if len(self.completed_exercises) == len(self.exercises):
+            self.current_exercise = None
+            self.sets_count_label.configure(text="")
+            self.timer_label.configure(text="Timer: ")
+            self.complete_button.configure(state=tk.DISABLED)
+            self.session_count += 1
+            self.sessions_log.append(time.strftime("%H:%M"))
+            self.completed_exercises = []
+            self.check_session_count()
+        else:
+            # Proceed to the next exercise
+            self.current_exercise = next(
+                exercise
+                for exercise in self.exercises
+                if exercise not in self.completed_exercises
+            )
+            self.current_set = 1
+            self.remaining_time = self.exercises[self.current_exercise]["time"]
+            self.sets_count_label.configure(
+                text=f"{self.current_exercise}: Set {self.current_set} of {self.exercises[self.current_exercise]['sets']} sets"
+            )
+            self.timer_label.configure(
+                text=f"Timer: {self.remaining_time//60:02d}:{self.remaining_time%60:02d}"
+            )
+
 
   def check_timer(self):
     if self.current_exercise is not None and self.remaining_time > 0:
