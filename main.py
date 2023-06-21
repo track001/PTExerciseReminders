@@ -2,9 +2,10 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import csv
 import time
-import os
+# import os
 import datetime
 from tkinter import filedialog
+import pytz
 
 
 class ExerciseReminder:
@@ -93,7 +94,9 @@ class ExerciseReminder:
         self.root.mainloop()
 
     def add_session(self):
-      session_time = time.strftime("%H:%M")
+      mst_timezone = pytz.timezone("America/Denver")
+      current_time = datetime.datetime.now(mst_timezone)
+      session_time = current_time.strftime("%H:%M")
       self.sessions_log.append(session_time)
       self.session_count += 1
       self.check_session_count()
