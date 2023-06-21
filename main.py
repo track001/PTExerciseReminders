@@ -177,22 +177,19 @@ class ExerciseReminder:
             self.session_info_label.configure(foreground="black")
 
     def view_sessions(self):
-        if not self.sessions_log:
-            messagebox.showwarning("View Sessions", "No sessions available to view.")
-            return
+      if not self.sessions_log:
+          messagebox.showwarning("View Sessions", "No sessions available to view.")
+          return
+  
+      sessions_message = "Sessions Log:\n"
+  
+      for i, session_time in enumerate(self.sessions_log, start=1):
+          progress = f"{i}/{len(self.sessions_log)}"
+          sessions_message += f"\nSession {i}: {session_time}\nProgress: {progress}\n"
+  
+      messagebox.showinfo("View Sessions", sessions_message)
 
-        today = datetime.date.today().strftime("%m%d%Y")
-        filtered_sessions = [
-            session for session in self.sessions_log if session.startswith(today)
-        ]
 
-        if not filtered_sessions:
-            messagebox.showinfo("View Sessions", "No sessions available for today.")
-        else:
-            sessions_message = "Sessions Log:\n"
-            for i, session_time in enumerate(filtered_sessions, start=1):
-                sessions_message += f"Session {i}: {session_time}\n"
-            messagebox.showinfo("View Sessions", sessions_message)
 
     def update_date_label(self):
         today = datetime.date.today().strftime("%A, %B %d, %Y")
