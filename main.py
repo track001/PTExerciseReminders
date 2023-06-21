@@ -2,6 +2,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import csv
 import time
+import os
+import datetime
+from tkinter import filedialog
 
 
 class ExerciseReminder:
@@ -32,6 +35,9 @@ class ExerciseReminder:
         "time": 60
       }
     }
+
+    self.date_label = tk.Label(self.root, text="")
+    self.date_label.pack()
 
     self.exercise_label = tk.Label(self.root, text="Select Exercise:")
     self.exercise_label.pack()
@@ -88,10 +94,19 @@ class ExerciseReminder:
                                        command=self.upload_session_logs)
     self.upload_log_button.pack()
 
+    self.update_date_label()
+
     self.check_session_count()
     self.check_timer()
 
     self.root.mainloop()
+
+  def add_session(self):
+    session_time = time.strftime("%H:%M")
+    self.sessions_log.append(session_time)
+    self.session_count += 1
+    self.check_session_count()
+    messagebox.showinfo("Add Session", "Session added successfully.")
 
   def start_exercise(self, event):
     exercise = self.exercise_var.get()
@@ -110,40 +125,40 @@ class ExerciseReminder:
   def complete_set(self):
     exercise = self.current_exercise
     if self.current_set < self.exercises[exercise]["sets"]:
-        self.current_set += 1
-        self.remaining_time = self.exercises[exercise]["time"]
+      self.current_set += 1
+      self.remaining_time = self.exercises[exercise]["time"]
+      self.sets_count_label.configure(
+        text=
+        f"{exercise}: Set {self.current_set} of {self.exercises[exercise]['sets']} sets"
+      )
+      self.timer_label.configure(
+        text=
+        f"Timer: {self.remaining_time//60:02d}:{self.remaining_time%60:02d}")
+    else:
+      self.completed_exercises.append(exercise)
+      if len(self.completed_exercises) == len(self.exercises):
+        self.current_exercise = None
+        self.sets_count_label.configure(text="")
+        self.timer_label.configure(text="Timer: ")
+        self.complete_button.configure(state=tk.DISABLED)
+        self.session_count += 1
+        self.sessions_log.append(time.strftime("%H:%M"))
+        self.completed_exercises = []
+        self.check_session_count()
+      else:
+        # Proceed to the next exercise
+        self.current_exercise = next(
+          exercise for exercise in self.exercises
+          if exercise not in self.completed_exercises)
+        self.current_set = 1
+        self.remaining_time = self.exercises[self.current_exercise]["time"]
         self.sets_count_label.configure(
-            text=f"{exercise}: Set {self.current_set} of {self.exercises[exercise]['sets']} sets"
+          text=
+          f"{self.current_exercise}: Set {self.current_set} of {self.exercises[self.current_exercise]['sets']} sets"
         )
         self.timer_label.configure(
-            text=f"Timer: {self.remaining_time//60:02d}:{self.remaining_time%60:02d}"
-        )
-    else:
-        self.completed_exercises.append(exercise)
-        if len(self.completed_exercises) == len(self.exercises):
-            self.current_exercise = None
-            self.sets_count_label.configure(text="")
-            self.timer_label.configure(text="Timer: ")
-            self.complete_button.configure(state=tk.DISABLED)
-            self.session_count += 1
-            self.sessions_log.append(time.strftime("%H:%M"))
-            self.completed_exercises = []
-            self.check_session_count()
-        else:
-            # Proceed to the next exercise
-            self.current_exercise = next(
-                exercise
-                for exercise in self.exercises
-                if exercise not in self.completed_exercises
-            )
-            self.current_set = 1
-            self.remaining_time = self.exercises[self.current_exercise]["time"]
-            self.sets_count_label.configure(
-                text=f"{self.current_exercise}: Set {self.current_set} of {self.exercises[self.current_exercise]['sets']} sets"
-            )
-            self.timer_label.configure(
-                text=f"Timer: {self.remaining_time//60:02d}:{self.remaining_time%60:02d}"
-            )
+          text=
+          f"Timer: {self.remaining_time//60:02d}:{self.remaining_time%60:02d}")
 
   def check_timer(self):
     if self.current_exercise is not None and self.remaining_time > 0:
@@ -166,22 +181,27 @@ class ExerciseReminder:
       messagebox.showwarning("View Sessions", "No sessions available to view.")
       return
 
-    sessions_message = "Sessions Log:\n"
-    for i, session_time in enumerate(self.sessions_log, start=1):
-      sessions_message += f"Session {i}: {session_time}\n"
+    today = datetime.date.today().strftime("%m%d%Y")
+    filtered_sessions = [
+      session for session in self.sessions_log if session.startswith(today)
+    ]
 
-    messagebox.showinfo("View Sessions", sessions_message)
+    if not filtered_sessions:
+      messagebox.showinfo("View Sessions", "No sessions available for today.")
+    else:
+      sessions_message = "Sessions Log:\n"
+      for i, session_time in enumerate(filtered_sessions, start=1):
+        sessions_message += f"Session {i}: {session_time}\n"
+      messagebox.showinfo("View Sessions", sessions_message)
 
-  def add_session(self):
-    session_time = simpledialog.askstring("Add Session", "Enter the session time (HH:MM):")
-    if session_time:
-      self.sessions_log.append(session_time)
-      self.session_count += 1
-      self.check_session_count()
+  def update_date_label(self):
+    today = datetime.date.today().strftime("%A, %B %d, %Y")
+    self.date_label.configure(text=f"Today's Date: {today}")
 
   def edit_session_log(self):
     if not self.sessions_log:
-      messagebox.showwarning("Edit Session Log", "No sessions available to edit.")
+      messagebox.showwarning("Edit Session Log",
+                             "No sessions available to edit.")
       return
 
     selected_session = simpledialog.askinteger(
@@ -201,8 +221,8 @@ class ExerciseReminder:
           "Invalid session number. Please select a valid session to edit.")
 
   def upload_session_logs(self):
-    filename = simpledialog.askstring("Upload Session Logs",
-                                      "Enter the filename to upload:")
+    filename = filedialog.askopenfilename(title="Upload Session Logs",
+                                          filetypes=[("CSV Files", "*.csv")])
     if filename:
       try:
         with open(filename, mode="r") as file:
@@ -211,19 +231,32 @@ class ExerciseReminder:
           self.sessions_log.extend(session_times)
           self.session_count += len(session_times)
           self.check_session_count()
-          messagebox.showinfo("Upload Session Logs",
-                              "Session logs uploaded successfully.")
+
+        # Save today's session log as a CSV file
+        today = time.strftime("%m%d%Y")
+        output_filename = f"Exercises{today}.csv"
+        with open(output_filename, mode="w", newline="") as file:
+          writer = csv.writer(file)
+          writer.writerow(["Session Time"])
+          writer.writerows([[session_time] for session_time in session_times])
+
+        messagebox.showinfo("Upload Session Logs",
+                            "Session logs uploaded successfully.")
+        messagebox.showinfo(
+          "Save Today's Session Log",
+          f"Today's session log saved as '{output_filename}'.")
       except FileNotFoundError:
         messagebox.showwarning(
           "Upload Session Logs",
-          "File not found. Please enter a valid filename.")
+          "File not found. Please select a valid filename.")
       except csv.Error:
         messagebox.showwarning("Upload Session Logs",
                                "Error occurred while reading the CSV file.")
 
   def save_session_log(self):
     if not self.sessions_log:
-      messagebox.showwarning("Save Session Log", "No sessions available to save.")
+      messagebox.showwarning("Save Session Log",
+                             "No sessions available to save.")
       return
 
     filename = "session_log.csv"
@@ -233,6 +266,7 @@ class ExerciseReminder:
       writer.writerows([[session_time] for session_time in self.sessions_log])
     messagebox.showinfo("Save Session Log",
                         f"Session log saved as '{filename}'.")
+
 
 if __name__ == "__main__":
   ExerciseReminder()
