@@ -148,25 +148,52 @@ class ExerciseReminder:
         self.root.after(1000, self.check_timer)
 
     def check_session_count(self):
-        session_count = len(self.sessions_log)
-        self.session_info_label.configure(text=f"Sessions completed: {session_count}/8")
-        if session_count == 8:
-            self.session_info_label.configure(foreground="green")
-        else:
-            self.session_info_label.configure(foreground="black")
+      filename = f"Exercises{time.strftime('%m%d%Y')}.csv"
+      try:
+          with open(filename, mode="r", newline="") as file:
+              reader = csv.reader(file)
+              # Skipping the header line
+              next(reader)
+              # Counting the sessions
+              session_count = max(0, sum(1 for _ in reader))
+              self.session_info_label.configure(text=f"Sessions completed: {session_count}/8")
+              self.progress_bar["value"] = session_count
+      except FileNotFoundError:
+          self.session_info_label.configure(text="Sessions completed: 0/8")
+          self.progress_bar["value"] = 0
+  
+      if session_count == 8:
+          self.session_info_label.configure(foreground="green")
+      else:
+          self.session_info_label.configure(foreground="black")
+
 
     def view_sessions(self):
-        if not self.sessions_log:
-            messagebox.showwarning("View Sessions", "No sessions available to view.")
-            return
-
-        sessions_message = "Sessions Log:\n"
-
-        for i, session_time in enumerate(self.sessions_log, start=1):
-            progress = f"{i}/{len(self.sessions_log)}"
-            sessions_message += f"\nSession {i}: {session_time}\nProgress: {progress}\n"
-
-        messagebox.showinfo("View Sessions", sessions_message)
+      sessions_message = "Sessions Log:\n"
+  
+      # Display sessions logged through the GUI
+      for i, session_time in enumerate(self.sessions_log, start=1):
+          progress = f"{i}/{len(self.sessions_log)}"
+          sessions_message += f"\nSession {i}: {session_time}\nProgress: {progress}\n"
+  
+      filename = f"Exercises{time.strftime('%m%d%Y')}.csv"
+      try:
+          with open(filename, mode="r", newline="") as file:
+              reader = csv.reader(file)
+              next(reader)  # Skip the header line
+  
+              # Display sessions from the CSV file
+              for i, row in enumerate(reader, start=i):
+                  session_time = row[0]
+                  progress = f"{i}/{i + len(self.sessions_log)}"
+                  sessions_message += f"\nSession {i}: {session_time}\nProgress: {progress}\n"
+      except FileNotFoundError:
+          pass
+  
+      if sessions_message == "Sessions Log:\n":
+          messagebox.showwarning("View Sessions", "No sessions available to view.")
+      else:
+          messagebox.showinfo("View Sessions", sessions_message)
 
     def update_progress_bar(self):
         session_count = len(self.sessions_log)
@@ -180,17 +207,19 @@ class ExerciseReminder:
 
 
     def save_session_log(self):
-        if not self.sessions_log:
-            messagebox.showwarning("Save Session Log", "No sessions available to save.")
-            return
+      if not self.sessions_log:
+          messagebox.showwarning("Save Session Log", "No sessions available to save.")
+          return
+  
+      today = time.strftime("%m%d%Y")
+      filename = f"Exercises{today}.csv"
+      with open(filename, mode="a", newline="") as file:
+          writer = csv.writer(file)
+          if file.tell() == 0:
+              writer.writerow(["Session Time"])
+          writer.writerows([[session_time] for session_time in self.sessions_log])
+      messagebox.showinfo("Save Session Log", f"Session log saved as '{filename}'.")
 
-        today = time.strftime("%m%d%Y")
-        filename = f"Exercises{today}.csv"
-        with open(filename, mode="w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(["Session Time"])
-            writer.writerows([[session_time] for session_time in self.sessions_log])
-        messagebox.showinfo("Save Session Log", f"Session log saved as '{filename}'.")
 
 
 if __name__ == "__main__":
