@@ -3,7 +3,9 @@ from tkinter import ttk, messagebox, simpledialog
 import csv
 import time
 import datetime
+from tkinter import filedialog
 import pytz
+
 
 class ExerciseReminder:
     def __init__(self):
@@ -15,8 +17,11 @@ class ExerciseReminder:
         self.current_set = None
         self.remaining_time = 0
         self.session_count = 0
+        self.completed_sessions = []
         self.sessions_log = []
-        self.completed_exercises = []
+
+        self.mst_timezone = pytz.timezone("America/Denver")
+
 
         self.exercises = {
             "Knee Extension": {"sets": 3, "time": 30},
@@ -68,8 +73,6 @@ class ExerciseReminder:
         )
         self.view_sessions_button.pack()
 
-        self.mst_timezone = pytz.timezone("America/Denver")  # MST timezone
-
         self.update_date_label()
 
         self.check_session_count()
@@ -78,17 +81,19 @@ class ExerciseReminder:
         self.root.mainloop()
 
     def start_exercise(self, event):
-        exercise = self.exercise_var.get()
-        self.current_exercise = exercise
-        self.current_set = 1
-        self.remaining_time = self.exercises[exercise]["time"]
-        self.sets_count_label.configure(
-            text=f"{exercise}: Set {self.current_set} of {self.exercises[exercise]['sets']} sets"
-        )
-        self.timer_label.configure(
-            text=f"Timer: {self.remaining_time // 60:02d}:{self.remaining_time % 60:02d}"
-        )
-        self.complete_button.configure(state=tk.NORMAL)
+      exercise = self.exercise_var.get()
+      self.current_exercise = exercise
+      self.current_set = 1
+      self.remaining_time = self.exercises[exercise]["time"]
+      self.sets_count_label.configure(
+          text=f"{exercise}: Set {self.current_set} of {self.exercises[exercise]['sets']} sets"
+      )
+      self.timer_label.configure(
+          text=f"Timer: {self.remaining_time // 60:02d}:{self.remaining_time % 60:02d}"
+      )
+      self.complete_button.configure(state=tk.NORMAL)
+      self.sessions_log.append(datetime.datetime.now(self.mst_timezone).strftime("%H:%M"))
+
 
     def complete_set(self):
         exercise = self.current_exercise
@@ -102,23 +107,24 @@ class ExerciseReminder:
                 text=f"Timer: {self.remaining_time // 60:02d}:{self.remaining_time % 60:02d}"
             )
         else:
-            self.completed_exercises.append(exercise)
-            if len(self.completed_exercises) == len(self.exercises):
+            self.completed_sessions.append(self.current_exercise)
+            if len(self.completed_sessions) == len(self.exercises):
                 self.current_exercise = None
                 self.sets_count_label.configure(text="")
                 self.timer_label.configure(text="Timer: ")
                 self.complete_button.configure(state=tk.DISABLED)
                 self.session_count += 1
-                self.add_session()  # Add session to sessions log
-                self.completed_exercises = []
+                self.sessions_log.append(time.strftime("%H:%M"))
+                self.completed_sessions = []
                 self.check_session_count()
+                self.update_progress_bar()
                 self.save_session_log()
             else:
                 # Proceed to the next exercise
                 self.current_exercise = next(
                     exercise
                     for exercise in self.exercises
-                    if exercise not in self.completed_exercises
+                    if exercise not in self.completed_sessions
                 )
                 self.current_set = 1
                 self.remaining_time = self.exercises[self.current_exercise]["time"]
@@ -142,41 +148,36 @@ class ExerciseReminder:
         self.root.after(1000, self.check_timer)
 
     def check_session_count(self):
-      session_count = max(0, len(self.sessions_log) - 1)  # Exclude the header row
-      self.session_info_label.configure(text=f"Sessions completed: {session_count}/8")
-      if session_count == 8:
-          self.session_info_label.configure(foreground="green")
-      else:
-          self.session_info_label.configure(foreground="black")
-
+        session_count = len(self.sessions_log)
+        self.session_info_label.configure(text=f"Sessions completed: {session_count}/8")
+        if session_count == 8:
+            self.session_info_label.configure(foreground="green")
+        else:
+            self.session_info_label.configure(foreground="black")
 
     def view_sessions(self):
-      if not self.sessions_log:
-          messagebox.showwarning("View Sessions", "No sessions available to view.")
-          return
-  
-      sessions_message = "Sessions Log:\n"
-  
-      for i, session_time in enumerate(self.sessions_log, start=1):
-          progress = f"{i}"
-          sessions_message += f"\nSession {i}: {session_time}\nProgress: {progress} of 8\n"
-  
-      messagebox.showinfo("View Sessions", sessions_message)
+        if not self.sessions_log:
+            messagebox.showwarning("View Sessions", "No sessions available to view.")
+            return
 
+        sessions_message = "Sessions Log:\n"
+
+        for i, session_time in enumerate(self.sessions_log, start=1):
+            progress = f"{i}/{len(self.sessions_log)}"
+            sessions_message += f"\nSession {i}: {session_time}\nProgress: {progress}\n"
+
+        messagebox.showinfo("View Sessions", sessions_message)
+
+    def update_progress_bar(self):
+        session_count = len(self.sessions_log)
+        self.progress_bar["value"] = session_count
+        self.progress_bar["maximum"] = 8
 
     def update_date_label(self):
-        current_time = datetime.datetime.now(self.mst_timezone)
-        today = current_time.strftime("%A, %B %d, %Y")
-        self.date_label.configure(text=f"Today's Date (MST): {today}")
+      current_time = datetime.datetime.now(self.mst_timezone)
+      today = current_time.strftime("%A, %B %d, %Y")
+      self.date_label.configure(text=f"Today's Date (MST): {today}")
 
-    def add_session(self):
-        current_time = datetime.datetime.now(self.mst_timezone)
-        session_time = current_time.strftime("%H:%M")
-        self.sessions_log.append(session_time)
-        self.session_count += 1
-        self.check_session_count()
-        self.save_session_log()
-        messagebox.showinfo("Add Session", "Session added successfully.")
 
     def save_session_log(self):
         if not self.sessions_log:
