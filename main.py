@@ -2,11 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import csv
 import time
-# import os
 import datetime
-from tkinter import filedialog
 import pytz
-
 
 class ExerciseReminder:
     def __init__(self):
@@ -71,20 +68,7 @@ class ExerciseReminder:
         )
         self.view_sessions_button.pack()
 
-        self.add_session_button = tk.Button(
-            self.root, text="Add Session", command=self.add_session
-        )
-        self.add_session_button.pack()
-
-        self.edit_session_button = tk.Button(
-            self.root, text="Edit Session Log", command=self.edit_session_log
-        )
-        self.edit_session_button.pack()
-
-        self.upload_log_button = tk.Button(
-            self.root, text="Upload Session Logs", command=self.upload_session_logs
-        )
-        self.upload_log_button.pack()
+        self.mst_timezone = pytz.timezone("America/Denver")  # MST timezone
 
         self.update_date_label()
 
@@ -92,16 +76,6 @@ class ExerciseReminder:
         self.check_timer()
 
         self.root.mainloop()
-
-    def add_session(self):
-      mst_timezone = pytz.timezone("America/Denver")
-      current_time = datetime.datetime.now(mst_timezone)
-      session_time = current_time.strftime("%H:%M")
-      self.sessions_log.append(session_time)
-      self.session_count += 1
-      self.check_session_count()
-      self.save_session_log()
-      messagebox.showinfo("Add Session", "Session added successfully.")
 
     def start_exercise(self, event):
         exercise = self.exercise_var.get()
@@ -135,7 +109,7 @@ class ExerciseReminder:
                 self.timer_label.configure(text="Timer: ")
                 self.complete_button.configure(state=tk.DISABLED)
                 self.session_count += 1
-                self.sessions_log.append(time.strftime("%H:%M"))
+                self.add_session()  # Add session to sessions log
                 self.completed_exercises = []
                 self.check_session_count()
                 self.save_session_log()
@@ -168,13 +142,13 @@ class ExerciseReminder:
         self.root.after(1000, self.check_timer)
 
     def check_session_count(self):
-        self.session_info_label.configure(
-            text=f"Sessions completed: {self.session_count}/8"
-        )
-        if self.session_count == 8:
-            self.session_info_label.configure(foreground="green")
-        else:
-            self.session_info_label.configure(foreground="black")
+      session_count = max(0, len(self.sessions_log) - 1)  # Exclude the header row
+      self.session_info_label.configure(text=f"Sessions completed: {session_count}/8")
+      if session_count == 8:
+          self.session_info_label.configure(foreground="green")
+      else:
+          self.session_info_label.configure(foreground="black")
+
 
     def view_sessions(self):
       if not self.sessions_log:
@@ -184,79 +158,25 @@ class ExerciseReminder:
       sessions_message = "Sessions Log:\n"
   
       for i, session_time in enumerate(self.sessions_log, start=1):
-          progress = f"{i}/{len(self.sessions_log)}"
-          sessions_message += f"\nSession {i}: {session_time}\nProgress: {progress}\n"
+          progress = f"{i}"
+          sessions_message += f"\nSession {i}: {session_time}\nProgress: {progress} of 8\n"
   
       messagebox.showinfo("View Sessions", sessions_message)
 
 
-
     def update_date_label(self):
-        today = datetime.date.today().strftime("%A, %B %d, %Y")
-        self.date_label.configure(text=f"Today's Date: {today}")
+        current_time = datetime.datetime.now(self.mst_timezone)
+        today = current_time.strftime("%A, %B %d, %Y")
+        self.date_label.configure(text=f"Today's Date (MST): {today}")
 
-    def edit_session_log(self):
-        if not self.sessions_log:
-            messagebox.showwarning("Edit Session Log", "No sessions available to edit.")
-            return
-
-        selected_session = simpledialog.askinteger(
-            "Edit Session Log", "Enter the session number to edit:"
-        )
-        if selected_session:
-            selected_session_index = selected_session - 1
-            if selected_session_index < len(self.sessions_log):
-                edited_time = simpledialog.askstring(
-                    "Edit Session Log",
-                    "Enter the new session time (HH:MM):",
-                    initialvalue=self.sessions_log[selected_session_index],
-                )
-                if edited_time:
-                    self.sessions_log[selected_session_index] = edited_time
-            else:
-                messagebox.showwarning(
-                    "Edit Session Log",
-                    "Invalid session number. Please select a valid session to edit.",
-                )
-
-    def upload_session_logs(self):
-        filename = filedialog.askopenfilename(
-            title="Upload Session Logs", filetypes=[("CSV Files", "*.csv")]
-        )
-        if filename:
-            try:
-                with open(filename, mode="r") as file:
-                    reader = csv.reader(file)
-                    session_times = [row[0] for row in reader]
-                    self.sessions_log.extend(session_times)
-                    self.session_count += len(session_times)
-                    self.check_session_count()
-
-                # Save today's session log as a CSV file
-                today = time.strftime("%m%d%Y")
-                output_filename = f"Exercises{today}.csv"
-                with open(output_filename, mode="w", newline="") as file:
-                    writer = csv.writer(file)
-                    writer.writerow(["Session Time"])
-                    writer.writerows(
-                        [[session_time] for session_time in session_times]
-                    )
-
-                messagebox.showinfo(
-                    "Upload Session Logs", "Session logs uploaded successfully."
-                )
-                messagebox.showinfo(
-                    "Save Today's Session Log",
-                    f"Today's session log saved as '{output_filename}'.",
-                )
-            except FileNotFoundError:
-                messagebox.showwarning(
-                    "Upload Session Logs", "File not found. Please select a valid filename."
-                )
-            except csv.Error:
-                messagebox.showwarning(
-                    "Upload Session Logs", "Error occurred while reading the CSV file."
-                )
+    def add_session(self):
+        current_time = datetime.datetime.now(self.mst_timezone)
+        session_time = current_time.strftime("%H:%M")
+        self.sessions_log.append(session_time)
+        self.session_count += 1
+        self.check_session_count()
+        self.save_session_log()
+        messagebox.showinfo("Add Session", "Session added successfully.")
 
     def save_session_log(self):
         if not self.sessions_log:
