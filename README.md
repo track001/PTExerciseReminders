@@ -2,7 +2,7 @@
 
 This is a simple exercise reminder application built using Tkinter in Python.
 
-![GUI](Exercise Reminder SS.JPG)
+![GUI](GUISS.JPG)
 
 
 ## Functionality
