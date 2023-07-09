@@ -2,6 +2,9 @@
 
 This is a simple exercise reminder application built using Tkinter in Python.
 
+![GUI](ExerciseReminderSS.JPG)
+
+
 ## Functionality
 
 The application allows you to select exercises from a dropdown menu and keeps track of your exercise sets and time. Here are the main features:
